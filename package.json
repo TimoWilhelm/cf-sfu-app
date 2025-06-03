@@ -14,8 +14,12 @@
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.11.0",
+    "@trpc/client": "^11.2.0",
+    "@trpc/server": "^11.2.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "webrtc-adapter": "^9.0.3",
+    "zod": "^3.25.49"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.4.0",

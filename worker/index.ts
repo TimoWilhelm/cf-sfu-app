@@ -1,18 +1,13 @@
-import { SfuClient } from "./sfu";
-
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { createContextFactory } from "./context";
+import { appRouter } from "./router";
 export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-
-    if (url.pathname.startsWith("/api/")) {
-      const sfuClient = new SfuClient(env.SFU_APP_ID, env.SFU_APP_TOKEN);
-
-      const sessionId = await sfuClient.createSession();
-
-      return Response.json({
-        name: sessionId,
-      });
-    }
-    return new Response(null, { status: 404 });
+  async fetch(req, env, ctx): Promise<Response> {
+    return fetchRequestHandler({
+      endpoint: "/trpc",
+      req,
+      router: appRouter,
+      createContext: createContextFactory(env, ctx),
+    });
   },
 } satisfies ExportedHandler<Env>;
