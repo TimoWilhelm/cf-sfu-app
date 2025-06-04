@@ -6,7 +6,6 @@ import { SfuClient } from "./sfu";
 export const t = initTRPC.context<Context>().create();
 
 export const appRouter = t.router({
-  // 1. Create session
   createSession: t.procedure
     .mutation(async ({ ctx }) => {
       const sfuClient = new SfuClient(ctx.env.SFU_APP_ID, ctx.env.SFU_APP_TOKEN);
@@ -14,13 +13,11 @@ export const appRouter = t.router({
       return { sessionId };
     }),
 
-  // 2. Push tracks (sendonly)
   pushTracks: t.procedure
     .input(z.object({
       sessionId: z.string(),
       sdp: z.string(),
       tracks: z.array(z.object({
-        location: z.string(),
         mid: z.string(),
         trackName: z.string(),
       })),
@@ -31,12 +28,10 @@ export const appRouter = t.router({
       return result;
     }),
 
-  // 3. Pull tracks (recvonly)
   pullTracks: t.procedure
     .input(z.object({
       sessionId: z.string(),
       tracksToPull: z.array(z.object({
-        location: z.string(),
         trackName: z.string(),
         sessionId: z.string(),
       })),
@@ -47,7 +42,6 @@ export const appRouter = t.router({
       return result;
     }),
 
-  // 4. Renegotiate
   renegotiate: t.procedure
     .input(z.object({
       sessionId: z.string(),
