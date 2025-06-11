@@ -14,10 +14,15 @@ const trpc = createTRPCClient<AppRouter>({
   ],
 });
 
+const baseRtcConfig = {
+  bundlePolicy: "max-bundle",
+} satisfies RTCConfiguration
+
 function App() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [status, setStatus] = useState<string>("Idle");
+  const [useTurn, setUseTurn] = useState<boolean>(false);
 
   function validateSessionDescription(
     sessionDescription:
@@ -41,6 +46,20 @@ function App() {
   }
 
   async function startEcho() {
+    let rtcConfig: RTCConfiguration = {
+      ...baseRtcConfig,
+      iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+    };
+
+    if (useTurn) {
+      setStatus("Getting TURN credentials...");
+      rtcConfig = {
+        ...baseRtcConfig,
+        ...(await trpc.generateTurnCredentials.query()),
+        iceTransportPolicy: "relay",
+      };
+    }
+
     setStatus("Requesting media...");
     // Get local media
     const media = await navigator.mediaDevices.getUserMedia({
@@ -56,10 +75,7 @@ function App() {
     const { sessionId: localSessionId } = await trpc.createSession.mutate();
 
     // Create local peer connection
-    const localPeerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
-      bundlePolicy: "max-bundle",
-    });
+    const localPeerConnection = new RTCPeerConnection(rtcConfig);
 
     // Add tracks as sendonly
     const transceivers = media
@@ -113,10 +129,7 @@ function App() {
     const { sessionId: remoteSessionId } = await trpc.createSession.mutate();
 
     // Create remote peer connection
-    const remotePeerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
-      bundlePolicy: "max-bundle",
-    });
+    const remotePeerConnection = new RTCPeerConnection(rtcConfig);
 
     // Listen for remote tracks
     const remoteStream = new MediaStream();
@@ -219,14 +232,25 @@ function App() {
           />
         </div>
       </div>
-      <div style={{ marginTop: "1rem", textAlign: "center" }}>
+      <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+        <div>
+          {/* switch to enable turn */}
+          <label>
+            <input
+              type="checkbox"
+              checked={useTurn}
+              onChange={(e) => setUseTurn(e.target.checked)}
+            />
+            Use TURN
+          </label>
+        </div>
         <button
           onClick={startEcho}
           style={{ padding: "0.5rem 1.5rem", fontSize: "1rem" }}
         >
           Start Echo
         </button>
-        <div style={{ marginTop: "0.5rem" }}>Status: {status}</div>
+        <div>Status: {status}</div>
       </div>
     </div>
   );
