@@ -79,7 +79,7 @@ export const appRouter = t.router({
       return result;
     }),
 
-  generateTurnCredentials: t.procedure.query(async ({ ctx }) => {
+  generateTurnCredentials: t.procedure.mutation(async ({ ctx }) => {
     const iceServers = await generateTurnCredentials(
       ctx.env.TURN_TOKEN_ID,
       ctx.env.TURN_API_TOKEN

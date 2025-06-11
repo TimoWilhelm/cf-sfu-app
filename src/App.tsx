@@ -55,7 +55,7 @@ function App() {
       setStatus("Getting TURN credentials...");
       rtcConfig = {
         ...baseRtcConfig,
-        ...(await trpc.generateTurnCredentials.query()),
+        ...(await trpc.generateTurnCredentials.mutate()),
         iceTransportPolicy: "relay",
       };
     }
