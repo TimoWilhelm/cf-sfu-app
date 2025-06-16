@@ -28,20 +28,12 @@ export class SfuClient {
   }
 
   async createSession() {
-    const response = await postAppsByAppIdSessionsNew({
+    return await postAppsByAppIdSessionsNew({
       client: this.#client,
       path: {
         appId: this.#appId,
       },
     });
-
-    if (!response.data) {
-      throw new Error(
-        `Failed to create session: ${JSON.stringify(response.error)}`
-      );
-    }
-
-    return response.data.sessionId;
   }
 
   /**
@@ -52,7 +44,7 @@ export class SfuClient {
     sdp: string,
     tracks: Array<{ mid: string; trackName: string }>
   ) {
-    const response = await postAppsByAppIdSessionsBySessionIdTracksNew({
+    return await postAppsByAppIdSessionsBySessionIdTracksNew({
       client: this.#client,
       path: {
         appId: this.#appId,
@@ -70,14 +62,6 @@ export class SfuClient {
         })),
       },
     });
-
-    if (!response.data) {
-      throw new Error(
-        `Failed to push tracks: ${JSON.stringify(response.error)}`
-      );
-    }
-
-    return response.data;
   }
 
   /**
@@ -87,7 +71,7 @@ export class SfuClient {
     sessionId: string,
     tracksToPull: Array<{ trackName: string; sessionId: string }>
   ) {
-    const response = await postAppsByAppIdSessionsBySessionIdTracksNew({
+    return await postAppsByAppIdSessionsBySessionIdTracksNew({
       client: this.#client,
       path: {
         appId: this.#appId,
@@ -101,21 +85,13 @@ export class SfuClient {
         })),
       },
     });
-
-    if (!response.data) {
-      throw new Error(
-        `Failed to pull tracks: ${JSON.stringify(response.error)}`
-      );
-    }
-
-    return response.data;
   }
 
   /**
    * Renegotiate the session (for answer)
    */
   async renegotiate(sessionId: string, sdp: string) {
-    const response = await putAppsByAppIdSessionsBySessionIdRenegotiate({
+    return await putAppsByAppIdSessionsBySessionIdRenegotiate({
       client: this.#client,
       path: {
         appId: this.#appId,
@@ -128,13 +104,5 @@ export class SfuClient {
         },
       },
     });
-
-    if (!response.data) {
-      throw new Error(
-        `Failed to renegotiate session: ${JSON.stringify(response.error)}`
-      );
-    }
-
-    return response.data;
   }
 }

@@ -4,4 +4,7 @@ export const createContextFactory =
   ({ req, resHeaders }: FetchCreateContextFnOptions) => {
     return { req, resHeaders, env, ctx };
   };
-export type Context = Awaited<ReturnType<ReturnType<typeof createContextFactory>>>;
+
+export type Context = Awaited<
+  ReturnType<ReturnType<typeof createContextFactory>>
+>;

@@ -1,19 +1,38 @@
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Context } from "./context";
 import { SfuClient } from "./sfu";
 import { generateTurnCredentials } from "./turn";
 
-export const t = initTRPC.context<Context>().create();
+const { procedure: publicProcedure, router } = initTRPC
+  .context<Context>()
+  .create();
 
-export const appRouter = t.router({
-  createSession: t.procedure.mutation(async ({ ctx }) => {
-    const sfuClient = new SfuClient(ctx.env.SFU_APP_ID, ctx.env.SFU_APP_TOKEN);
-    const sessionId = await sfuClient.createSession();
-    return { sessionId };
+const sfuProcedure = publicProcedure.use(({ ctx, next }) => {
+  if (!ctx.env.SFU_APP_ID || !ctx.env.SFU_APP_TOKEN) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      cause: "SFU not configured",
+    });
+  }
+  const sfuClient = new SfuClient(ctx.env.SFU_APP_ID, ctx.env.SFU_APP_TOKEN);
+  return next({ ctx: { ...ctx, sfuClient } });
+});
+
+export const appRouter = router({
+  createSession: sfuProcedure.mutation(async ({ ctx }) => {
+    const repsonse = await ctx.sfuClient.createSession();
+    if (!repsonse.data) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        cause: repsonse.error,
+      });
+    }
+
+    return { sessionId: repsonse.data.sessionId };
   }),
 
-  pushTracks: t.procedure
+  pushTracks: sfuProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -27,19 +46,23 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const sfuClient = new SfuClient(
-        ctx.env.SFU_APP_ID,
-        ctx.env.SFU_APP_TOKEN
-      );
-      const result = await sfuClient.pushTracks(
+      const result = await ctx.sfuClient.pushTracks(
         input.sessionId,
         input.sdp,
         input.tracks
       );
-      return result;
+     
+      if (!result.data) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          cause: result.error,
+        });
+      }
+
+      return result.data;
     }),
 
-  pullTracks: t.procedure
+  pullTracks: sfuProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -52,18 +75,22 @@ export const appRouter = t.router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const sfuClient = new SfuClient(
-        ctx.env.SFU_APP_ID,
-        ctx.env.SFU_APP_TOKEN
-      );
-      const result = await sfuClient.pullTracks(
+      const result = await ctx.sfuClient.pullTracks(
         input.sessionId,
         input.tracksToPull
       );
-      return result;
+      
+      if (!result.data) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          cause: result.error,
+        });
+      }
+
+      return result.data;
     }),
 
-  renegotiate: t.procedure
+  renegotiate: sfuProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -76,16 +103,29 @@ export const appRouter = t.router({
         ctx.env.SFU_APP_TOKEN
       );
       const result = await sfuClient.renegotiate(input.sessionId, input.sdp);
-      return result;
+      
+      if (!result.data) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          cause: result.error,
+        });
+      }
+
+      return result.data;
     }),
 
-  generateTurnCredentials: t.procedure.mutation(async ({ ctx }) => {
-    const iceServers = await generateTurnCredentials(
-      ctx.env.TURN_TOKEN_ID,
-      ctx.env.TURN_API_TOKEN
-    );
-
-    return iceServers;
+  generateTurnCredentials: publicProcedure.mutation(async ({ ctx }) => {
+    try {
+      return await generateTurnCredentials(
+        ctx.env.TURN_TOKEN_ID,
+        ctx.env.TURN_API_TOKEN
+      );
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        cause: error,
+      }) 
+    }
   }),
 });
 
